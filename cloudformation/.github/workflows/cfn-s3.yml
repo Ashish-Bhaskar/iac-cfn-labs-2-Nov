@@ -1,0 +1,41 @@
+name: cfn-s3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'cloudformation/s3-bucket.yaml'
+      - '.github/workflows/cfn-s3.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: pipx install cfn-lint
+      - run: cfn-lint cloudformation/s3-bucket.yaml
+
+  deploy:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Deploy stack
+        run: |
+          aws cloudformation deploy \
+            --template-file cloudformation/s3-bucket.yaml \
+            --stack-name iac-s3-bucket \
+            --no-fail-on-empty-changeset
+      - name: Show outputs
+        run: |
+          aws cloudformation describe-stacks --stack-name iac-s3-bucket \
+            --query "Stacks[0].Outputs" --output table
