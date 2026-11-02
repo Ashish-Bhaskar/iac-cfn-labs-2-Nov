@@ -22,7 +22,7 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
-      LifecycleConfiguration:
+      LifecycleConfguration:
         Rules:
           - Id: ExpireOldObjects
             Status: Enabled
