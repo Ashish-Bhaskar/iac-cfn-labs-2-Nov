@@ -26,7 +26,7 @@ Resources:
         Rules:
           - Id: ExpireOldObjects
             Status: Enabled
-            ExpirationInDays: 7
+            ExpirationInDays: 14
       Tags:
         - Key: Project
           Value: iac-labs
