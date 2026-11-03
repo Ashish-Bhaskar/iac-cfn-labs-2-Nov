@@ -1,0 +1,51 @@
+name: tf-s3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/s3-bucket/**'
+      - '.github/workflows/tf-s3.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency: tf-s3
+
+defaults:
+  run:
+    working-directory: terraform/s3-bucket
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+      - name: Check formatting
+        run: terraform fmt -check -diff
+      - name: Init without backend
+        run: terraform init -backend=false -input=false
+      - name: Validate
+        run: terraform validate
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Init
+        run: terraform init -input=false
+      - name: Plan
+        run: terraform plan -input=false -out=tfplan
+      - name: Apply
+        run: terraform apply -input=false tfplan
+      - name: Show outputs
+        run: terraform output
