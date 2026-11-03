@@ -67,7 +67,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "lab" {
     filter {}
 
     expiration {
-      days = 14
+      days = 21
     }
   }
 }
