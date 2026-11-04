@@ -1,0 +1,53 @@
+name: teardown
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'What to destroy'
+        type: choice
+        options: [cfn-s3, tf-s3]
+      confirm:
+        description: 'Type DESTROY to confirm'
+        type: string
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  cfn-s3:
+    if: inputs.target == 'cfn-s3' && inputs.confirm == 'DESTROY'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Delete stack
+        run: |
+          aws cloudformation delete-stack --stack-name iac-s3-bucket
+          aws cloudformation wait stack-delete-complete --stack-name iac-s3-bucket
+          echo "Stack iac-s3-bucket deleted"
+
+  tf-s3:
+    if: inputs.target == 'tf-s3' && inputs.confirm == 'DESTROY'
+    runs-on: ubuntu-latest
+    concurrency: tf-s3
+    defaults:
+      run:
+        working-directory: terraform/s3-bucket
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Init
+        run: terraform init -input=false
+      - name: Plan destroy
+        run: terraform plan -destroy -input=false -out=destroy.tfplan
+      - name: Destroy
+        run: terraform apply -input=false destroy.tfplan
